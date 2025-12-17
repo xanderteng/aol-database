@@ -1,0 +1,50 @@
+cd C:\xampp\mysql\bin
+mysql --local-infile=1 -u root -p
+
+USE tokope
+
+-- Drop Trigger
+DROP TRIGGER IF EXISTS trg_invoicedetails_before_insert;
+
+-- Import Files
+
+LOAD DATA LOCAL INFILE 'C:/xampp/phpMyAdmin/upload/import_category.csv' 
+INTO TABLE category FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
+
+LOAD DATA LOCAL INFILE 'C:/xampp/phpMyAdmin/upload/import_country.csv' 
+INTO TABLE country FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
+
+LOAD DATA LOCAL INFILE 'C:/xampp/phpMyAdmin/upload/import_expedition.csv' 
+INTO TABLE expedition FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
+
+LOAD DATA LOCAL INFILE 'C:/xampp/phpMyAdmin/upload/import_seller.csv' 
+INTO TABLE seller FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
+
+LOAD DATA LOCAL INFILE 'C:/xampp/phpMyAdmin/upload/import_customer.csv' 
+INTO TABLE customer FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
+
+LOAD DATA LOCAL INFILE 'C:/xampp/phpMyAdmin/upload/import_product.csv' 
+INTO TABLE product FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n' IGNORE 1 ROWS 
+(ProductId, CategoryId, ProductName, ProductDescription, ProductPrice, ProductQuantity);
+
+LOAD DATA LOCAL INFILE 'C:/xampp/phpMyAdmin/upload/import_invoice.csv' 
+INTO TABLE invoice FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n' IGNORE 1 ROWS 
+(InvoiceId, CustomerId, SellerId, ExpeditionId, InvoiceDate, InvoiceStatus);
+
+LOAD DATA LOCAL INFILE 'C:/xampp/phpMyAdmin/upload/import_invoicedetails.csv' 
+INTO TABLE invoicedetails FIELDS TERMINATED BY ',' ENCLOSED BY '"' LINES TERMINATED BY '\n' IGNORE 1 ROWS;
+
+-- Re-enable Trigger
+DELIMITER $$
+CREATE TRIGGER trg_invoicedetails_before_insert
+BEFORE INSERT ON invoicedetails
+FOR EACH ROW
+BEGIN
+    DECLARE price DECIMAL(10,2);
+    SELECT ProductPrice INTO price FROM product WHERE ProductId = NEW.ProductId;
+    IF price IS NULL THEN
+        SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT = 'ProductId not found';
+    END IF;
+    SET NEW.TotalPrice = NEW.Quantity * price;
+END $$
+DELIMITER ;
